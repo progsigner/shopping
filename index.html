@@ -52,37 +52,20 @@
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font-sans);
-      background: var(--surface-0);
-      color: var(--text-primary);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 1.5rem 1rem 3rem;
-    }
+    body { font-family: var(--font-sans); background: var(--surface-0); color: var(--text-primary); min-height: 100vh; display: flex; justify-content: center; padding: 1.5rem 1rem 3rem; }
     .app { width: 100%; max-width: 680px; }
     .app-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
     .app-header h1 { font-size: 22px; font-weight: 500; }
+    .sync-status { margin-left: auto; font-size: 12px; display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+    .sync-dot.ok { background: #3B6D11; }
+    .sync-dot.saving { background: #BA7517; animation: pulse 1s infinite; }
+    .sync-dot.error { background: #A32D2D; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    input, select, button, textarea {
-      font-family: var(--font-sans);
-      font-size: 14px;
-      color: var(--text-primary);
-      background: var(--surface-2);
-      border: 0.5px solid var(--border-strong);
-      border-radius: var(--radius);
-      padding: 8px 10px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
+    input, select, button, textarea { font-family: var(--font-sans); font-size: 14px; color: var(--text-primary); background: var(--surface-2); border: 0.5px solid var(--border-strong); border-radius: var(--radius); padding: 8px 10px; outline: none; transition: border-color 0.15s; }
     input:focus, select:focus { border-color: var(--fill-accent); }
-    button {
-      background: var(--surface-2);
-      border-color: var(--border-strong);
-      cursor: pointer;
-      padding: 7px 14px;
-    }
+    button { background: var(--surface-2); border-color: var(--border-strong); cursor: pointer; padding: 7px 14px; }
     button:hover { background: var(--surface-1); }
     button:active { transform: scale(0.98); }
 
@@ -182,6 +165,10 @@
     .icon-opt { width: 30px; height: 30px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; border: 1px solid transparent; background: var(--surface-1); color: var(--text-secondary); }
     .icon-opt.sel { border-color: var(--border-accent); background: var(--bg-accent); color: var(--text-accent); }
 
+    .loading { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
+    .loading i { font-size: 32px; display: block; margin-bottom: 8px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (max-width: 480px) {
       .summary { grid-template-columns: repeat(2, 1fr); }
       .monthly-stats { grid-template-columns: repeat(2, 1fr); }
@@ -195,92 +182,85 @@
   <div class="app-header">
     <i class="ti ti-shopping-cart" style="font-size:24px;color:var(--text-accent);" aria-hidden="true"></i>
     <h1>쇼핑리스트</h1>
+    <div class="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-text">연결 중...</span>
+    </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" onclick="showPanel('list',this)"><i class="ti ti-list" aria-hidden="true"></i> 쇼핑리스트</button>
-    <button class="tab" onclick="showPanel('payments',this)"><i class="ti ti-credit-card" aria-hidden="true"></i> 결제수단</button>
-    <button class="tab" onclick="showPanel('categories',this)"><i class="ti ti-tag" aria-hidden="true"></i> 카테고리</button>
-    <button class="tab" onclick="showPanel('monthly',this)"><i class="ti ti-calendar" aria-hidden="true"></i> 월별</button>
+  <div id="loading" class="loading">
+    <i class="ti ti-refresh"></i>
+    데이터 불러오는 중...
   </div>
 
-  <!-- 리스트 패널 -->
-  <div id="panel-list" class="panel active">
-    <div class="filter-bar">
-      <button class="filter-chip active" id="fc-all" onclick="setFilter('all')"><i class="ti ti-layout-list" aria-hidden="true"></i> 전체 <span class="chip-cnt" id="fcnt-all"></span></button>
-      <div class="filter-sep"></div>
-      <button class="filter-chip" id="fc-wish" onclick="setFilter('wish')"><i class="ti ti-heart" aria-hidden="true"></i> 위시리스트 <span class="chip-cnt" id="fcnt-wish"></span></button>
-      <button class="filter-chip" id="fc-done" onclick="setFilter('done')"><i class="ti ti-check" aria-hidden="true"></i> 구매완료 <span class="chip-cnt" id="fcnt-done"></span></button>
+  <div id="main-content" style="display:none;">
+    <div class="tabs">
+      <button class="tab active" onclick="showPanel('list',this)"><i class="ti ti-list" aria-hidden="true"></i> 쇼핑리스트</button>
+      <button class="tab" onclick="showPanel('payments',this)"><i class="ti ti-credit-card" aria-hidden="true"></i> 결제수단</button>
+      <button class="tab" onclick="showPanel('categories',this)"><i class="ti ti-tag" aria-hidden="true"></i> 카테고리</button>
+      <button class="tab" onclick="showPanel('monthly',this)"><i class="ti ti-calendar" aria-hidden="true"></i> 월별</button>
     </div>
 
-    <div class="form-card">
-      <div class="form-row">
-        <div class="field" style="flex:2;min-width:130px;"><label>아이템 이름</label><input type="text" id="f-name" placeholder="예: 에어팟 프로"/></div>
-        <div class="field" style="min-width:60px;"><label>수량</label><input type="number" id="f-qty" value="1" min="1"/></div>
-        <div class="field" style="min-width:100px;"><label>카테고리</label><select id="f-cat"></select></div>
+    <div id="panel-list" class="panel active">
+      <div class="filter-bar">
+        <button class="filter-chip active" id="fc-all" onclick="setFilter('all')"><i class="ti ti-layout-list" aria-hidden="true"></i> 전체 <span class="chip-cnt" id="fcnt-all"></span></button>
+        <div class="filter-sep"></div>
+        <button class="filter-chip" id="fc-wish" onclick="setFilter('wish')"><i class="ti ti-heart" aria-hidden="true"></i> 위시리스트 <span class="chip-cnt" id="fcnt-wish"></span></button>
+        <button class="filter-chip" id="fc-done" onclick="setFilter('done')"><i class="ti ti-check" aria-hidden="true"></i> 구매완료 <span class="chip-cnt" id="fcnt-done"></span></button>
       </div>
-      <div class="form-row">
-        <div class="field" style="min-width:95px;"><label>가격 (원)</label><input type="number" id="f-price" placeholder="0" min="0"/></div>
-        <div class="field" style="min-width:115px;"><label>결제수단</label><select id="f-pay"></select></div>
-        <div class="field" style="min-width:90px;"><label>할부</label>
-          <select id="f-inst">
-            <option value="0">일시불</option><option value="2">2개월</option><option value="3">3개월</option>
-            <option value="6">6개월</option><option value="12">12개월</option><option value="24">24개월</option>
-          </select>
+      <div class="form-card">
+        <div class="form-row">
+          <div class="field" style="flex:2;min-width:130px;"><label>아이템 이름</label><input type="text" id="f-name" placeholder="예: 에어팟 프로"/></div>
+          <div class="field" style="min-width:60px;"><label>수량</label><input type="number" id="f-qty" value="1" min="1"/></div>
+          <div class="field" style="min-width:100px;"><label>카테고리</label><select id="f-cat"></select></div>
         </div>
+        <div class="form-row">
+          <div class="field" style="min-width:95px;"><label>가격 (원)</label><input type="number" id="f-price" placeholder="0" min="0"/></div>
+          <div class="field" style="min-width:115px;"><label>결제수단</label><select id="f-pay"></select></div>
+          <div class="field" style="min-width:90px;"><label>할부</label>
+            <select id="f-inst"><option value="0">일시불</option><option value="2">2개월</option><option value="3">3개월</option><option value="6">6개월</option><option value="12">12개월</option><option value="24">24개월</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field full"><label>구매 URL (선택)</label><input type="url" id="f-url" placeholder="https://..."/></div>
+        </div>
+        <button class="add-btn" onclick="addItem()"><i class="ti ti-heart" aria-hidden="true"></i> 위시리스트에 추가</button>
       </div>
-      <div class="form-row">
-        <div class="field full"><label>구매 URL (선택)</label><input type="url" id="f-url" placeholder="https://..."/></div>
+      <div class="summary">
+        <div class="stat"><div class="stat-label">전체</div><div class="stat-value" id="s-all">0</div></div>
+        <div class="stat"><div class="stat-label">위시리스트</div><div class="stat-value" id="s-wish" style="color:var(--text-accent);">0</div></div>
+        <div class="stat"><div class="stat-label">구매완료</div><div class="stat-value" id="s-done" style="color:var(--text-success);">0</div></div>
+        <div class="stat"><div class="stat-label">총 지출</div><div class="stat-value" id="s-sum" style="font-size:12px;">0원</div></div>
       </div>
-      <button class="add-btn" onclick="addItem()"><i class="ti ti-heart" aria-hidden="true"></i> 위시리스트에 추가</button>
+      <div id="list-container"></div>
+      <div class="footer-btns">
+        <button onclick="clearFiltered()" style="color:var(--text-danger);border-color:var(--border-danger);font-size:12px;">
+          <i class="ti ti-trash" aria-hidden="true"></i> <span id="clear-label">전체 삭제</span>
+        </button>
+      </div>
     </div>
 
-    <div class="summary">
-      <div class="stat"><div class="stat-label">전체</div><div class="stat-value" id="s-all">0</div></div>
-      <div class="stat"><div class="stat-label">위시리스트</div><div class="stat-value" id="s-wish" style="color:var(--text-accent);">0</div></div>
-      <div class="stat"><div class="stat-label">구매완료</div><div class="stat-value" id="s-done" style="color:var(--text-success);">0</div></div>
-      <div class="stat"><div class="stat-label">총 지출</div><div class="stat-value" id="s-sum" style="font-size:12px;">0원</div></div>
+    <div id="panel-payments" class="panel">
+      <div class="mgmt-header"><span class="mgmt-title">등록된 결제수단</span><button onclick="openModal('pay')" style="font-size:13px;padding:6px 14px;"><i class="ti ti-plus" aria-hidden="true"></i> 추가</button></div>
+      <div id="pay-list"></div>
     </div>
 
-    <div id="list-container"></div>
-
-    <div class="footer-btns">
-      <button onclick="clearFiltered()" style="color:var(--text-danger);border-color:var(--border-danger);font-size:12px;">
-        <i class="ti ti-trash" aria-hidden="true"></i> <span id="clear-label">전체 삭제</span>
-      </button>
+    <div id="panel-categories" class="panel">
+      <div class="mgmt-header"><span class="mgmt-title">등록된 카테고리</span><button onclick="openModal('cat')" style="font-size:13px;padding:6px 14px;"><i class="ti ti-plus" aria-hidden="true"></i> 추가</button></div>
+      <div id="cat-list"></div>
     </div>
-  </div>
 
-  <!-- 결제수단 패널 -->
-  <div id="panel-payments" class="panel">
-    <div class="mgmt-header">
-      <span class="mgmt-title">등록된 결제수단</span>
-      <button onclick="openModal('pay')" style="font-size:13px;padding:6px 14px;"><i class="ti ti-plus" aria-hidden="true"></i> 추가</button>
+    <div id="panel-monthly" class="panel">
+      <div class="month-header">
+        <button class="month-nav" onclick="changeMonth(-1)"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+        <div class="month-title" id="month-title"></div>
+        <button class="month-nav" onclick="changeMonth(1)"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <div id="monthly-content"></div>
     </div>
-    <div id="pay-list"></div>
-  </div>
-
-  <!-- 카테고리 패널 -->
-  <div id="panel-categories" class="panel">
-    <div class="mgmt-header">
-      <span class="mgmt-title">등록된 카테고리</span>
-      <button onclick="openModal('cat')" style="font-size:13px;padding:6px 14px;"><i class="ti ti-plus" aria-hidden="true"></i> 추가</button>
-    </div>
-    <div id="cat-list"></div>
-  </div>
-
-  <!-- 월별 패널 -->
-  <div id="panel-monthly" class="panel">
-    <div class="month-header">
-      <button class="month-nav" onclick="changeMonth(-1)"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
-      <div class="month-title" id="month-title"></div>
-      <button class="month-nav" onclick="changeMonth(1)"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
-    </div>
-    <div id="monthly-content"></div>
   </div>
 </div>
 
-<!-- 모달 -->
 <div class="modal-overlay" id="main-modal">
   <div class="modal">
     <h3 id="modal-title">추가</h3>
@@ -293,51 +273,79 @@
 </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA2RKqwq66hKnuskRYxhv6HzklMYR31ESI",
+  authDomain: "shopping-list-680a9.firebaseapp.com",
+  projectId: "shopping-list-680a9",
+  storageBucket: "shopping-list-680a9.firebasestorage.app",
+  messagingSenderId: "583017846186",
+  appId: "1:583017846186:web:04bd892a67e3a5498c47d3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const docRef = doc(db, "shopping", "data");
+
 const COLORS=['#378ADD','#1D9E75','#D85A30','#BA7517','#7F77DD','#D4537E','#444441','#3B6D11','#E24B4A','#0F6E56'];
 const PAY_ICONS={'신용카드':'ti-credit-card','체크카드':'ti-wallet','현금':'ti-cash','간편결제':'ti-device-mobile'};
 const CAT_ICONS_LIST=['ti-meat','ti-bottle','ti-home','ti-leaf','ti-cheese','ti-device-laptop','ti-shirt','ti-book','ti-tools','ti-dots','ti-gift','ti-car'];
 
-const now=new Date();
-let viewYear=now.getFullYear(),viewMonth=now.getMonth();
-let nItemId=1,nPayId=1,nCatId=1;
-let editingId=null,modalMode='';
+const now = new Date();
+let viewYear=now.getFullYear(), viewMonth=now.getMonth();
+let editingId=null, modalMode='';
 let activeFilter='all';
-let selColor=COLORS[0],selIcon='ti-tag';
+let selColor=COLORS[0], selIcon='ti-tag';
+let saveTimer=null;
+
+let state = {
+  cats: [
+    {id:1,name:'식품',icon:'ti-meat',color:'#D85A30'},
+    {id:2,name:'음료',icon:'ti-bottle',color:'#378ADD'},
+    {id:3,name:'생활용품',icon:'ti-home',color:'#444441'},
+    {id:4,name:'채소/과일',icon:'ti-leaf',color:'#3B6D11'},
+    {id:5,name:'유제품',icon:'ti-cheese',color:'#BA7517'},
+    {id:6,name:'전자제품',icon:'ti-device-laptop',color:'#7F77DD'},
+    {id:7,name:'기타',icon:'ti-dots',color:'#888780'},
+  ],
+  pays: [
+    {id:1,name:'신한 신용카드',type:'신용카드',num:'5678',color:'#378ADD',limit:1000000},
+    {id:2,name:'국민 체크카드',type:'체크카드',num:'9012',color:'#1D9E75',limit:500000},
+    {id:3,name:'카카오페이',type:'간편결제',num:'',color:'#BA7517',limit:0},
+  ],
+  items: [],
+  nItemId: 1, nPayId: 10, nCatId: 10
+};
+
+function setSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  dot.className = 'sync-dot ' + status;
+  text.textContent = status==='ok' ? '동기화됨' : status==='saving' ? '저장 중...' : '연결 오류';
+}
+
+function save() {
+  setSyncStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await setDoc(docRef, state);
+      setSyncStatus('ok');
+    } catch(e) {
+      setSyncStatus('error');
+      console.error(e);
+    }
+  }, 600);
+}
 
 function ym(d){return d.getFullYear()*100+d.getMonth();}
 function fmt(n){return n.toLocaleString()+'원';}
+const getCat=id=>state.cats.find(c=>c.id===id);
+const getPay=id=>state.pays.find(p=>p.id===id);
 
-function load(){
-  const d=localStorage.getItem('shopping-app');
-  if(d){
-    const p=JSON.parse(d);
-    cats=p.cats||cats; pays=p.pays||pays; items=p.items||items;
-    nItemId=p.nItemId||nItemId; nPayId=p.nPayId||nPayId; nCatId=p.nCatId||nCatId;
-  }
-}
-function save(){
-  localStorage.setItem('shopping-app',JSON.stringify({cats,pays,items,nItemId,nPayId,nCatId}));
-}
-
-let cats=[
-  {id:nCatId++,name:'식품',icon:'ti-meat',color:'#D85A30'},
-  {id:nCatId++,name:'음료',icon:'ti-bottle',color:'#378ADD'},
-  {id:nCatId++,name:'생활용품',icon:'ti-home',color:'#444441'},
-  {id:nCatId++,name:'채소/과일',icon:'ti-leaf',color:'#3B6D11'},
-  {id:nCatId++,name:'유제품',icon:'ti-cheese',color:'#BA7517'},
-  {id:nCatId++,name:'전자제품',icon:'ti-device-laptop',color:'#7F77DD'},
-  {id:nCatId++,name:'기타',icon:'ti-dots',color:'#888780'},
-];
-let pays=[
-  {id:nPayId++,name:'신한 신용카드',type:'신용카드',num:'5678',color:'#378ADD',limit:1000000},
-  {id:nPayId++,name:'국민 체크카드',type:'체크카드',num:'9012',color:'#1D9E75',limit:500000},
-  {id:nPayId++,name:'카카오페이',type:'간편결제',num:'',color:'#BA7517',limit:0},
-];
-let items=[];
-
-const getCat=id=>cats.find(c=>c.id===id);
-const getPay=id=>pays.find(p=>p.id===id);
 function remainAmt(item){
   if(item.inst===0)return 0;
   const m=Math.round(item.price/item.inst);
@@ -345,10 +353,10 @@ function remainAmt(item){
 }
 
 function refreshSelects(){
-  const cs=document.getElementById('f-cat'),ps=document.getElementById('f-pay');
-  const cv=cs.value,pv=ps.value;
-  cs.innerHTML=cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  ps.innerHTML=pays.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const cs=document.getElementById('f-cat'), ps=document.getElementById('f-pay');
+  const cv=cs.value, pv=ps.value;
+  cs.innerHTML=state.cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  ps.innerHTML=state.pays.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   if(cv)cs.value=cv; if(pv)ps.value=pv;
 }
 
@@ -360,10 +368,12 @@ function setFilter(f){
   renderList();
 }
 
-function addItem(){
+window.setFilter = setFilter;
+
+window.addItem = function(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){document.getElementById('f-name').focus();return;}
-  items.push({id:nItemId++,name,qty:parseInt(document.getElementById('f-qty').value)||1,
+  state.items.push({id:state.nItemId++,name,qty:parseInt(document.getElementById('f-qty').value)||1,
     catId:parseInt(document.getElementById('f-cat').value),
     price:parseInt(document.getElementById('f-price').value)||0,
     payId:parseInt(document.getElementById('f-pay').value),
@@ -375,20 +385,22 @@ function addItem(){
   document.getElementById('f-url').value='';
   document.getElementById('f-qty').value=1;
   save(); renderList(); document.getElementById('f-name').focus();
-}
-function markDone(id){const i=items.find(x=>x.id===id);if(i)i.done=!i.done;save();renderList();}
-function deleteItem(id){items=items.filter(x=>x.id!==id);save();renderList();}
-function payMonth(id){const i=items.find(x=>x.id===id);if(i&&i.paidMonths<i.inst){i.paidMonths++;save();renderList();}}
-function clearFiltered(){
+};
+
+window.markDone = function(id){const i=state.items.find(x=>x.id===id);if(i)i.done=!i.done;save();renderList();};
+window.deleteItem = function(id){state.items=state.items.filter(x=>x.id!==id);save();renderList();};
+window.payMonth = function(id){const i=state.items.find(x=>x.id===id);if(i&&i.paidMonths<i.inst){i.paidMonths++;save();renderList();}};
+
+window.clearFiltered = function(){
   if(!confirm('정말 삭제할까요?'))return;
-  if(activeFilter==='all')items=[];
-  else if(activeFilter==='wish')items=items.filter(i=>i.done);
-  else items=items.filter(i=>!i.done);
+  if(activeFilter==='all')state.items=[];
+  else if(activeFilter==='wish')state.items=state.items.filter(i=>i.done);
+  else state.items=state.items.filter(i=>!i.done);
   save();renderList();
-}
+};
 
 function itemCard(item){
-  const cat=getCat(item.catId),pay=getPay(item.payId);
+  const cat=getCat(item.catId), pay=getPay(item.payId);
   const rem=remainAmt(item);
   const pct=item.inst>0?Math.round((item.paidMonths/item.inst)*100):100;
   const monthly=item.inst>0?Math.round(item.price/item.inst):0;
@@ -398,14 +410,14 @@ function itemCard(item){
     ?`<span class="badge badge-done"><i class="ti ti-check" aria-hidden="true"></i>구매완료</span>`
     :`<span class="badge badge-wish"><i class="ti ti-heart" aria-hidden="true"></i>위시</span>`;
   const actionBtn=item.done
-    ?`<button class="icon-btn accent" title="위시리스트로" onclick="markDone(${item.id})" aria-label="위시로 이동"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>`
-    :`<button class="icon-btn success" title="구매완료" onclick="markDone(${item.id})" aria-label="구매완료로 이동"><i class="ti ti-shopping-cart-check" aria-hidden="true"></i></button>`;
+    ?`<button class="icon-btn accent" title="위시리스트로" onclick="markDone(${item.id})"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>`
+    :`<button class="icon-btn success" title="구매완료" onclick="markDone(${item.id})"><i class="ti ti-shopping-cart-check" aria-hidden="true"></i></button>`;
   return `<div class="item-card ${item.done?'done-style':'wish-style'}">
     <div class="item-top">
       <span class="item-name">${item.name}${item.qty>1?` <span style="font-size:11px;color:var(--text-muted);">×${item.qty}</span>`:''}</span>
       <span class="item-price">${item.price?fmt(item.price*item.qty):''}</span>
       ${actionBtn}
-      <button class="icon-btn" onclick="deleteItem(${item.id})" aria-label="${item.name} 삭제"><i class="ti ti-x" aria-hidden="true"></i></button>
+      <button class="icon-btn" onclick="deleteItem(${item.id})"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
     <div class="item-meta">
       ${statusBadge}${catBadge}${payBadge}
@@ -422,12 +434,12 @@ function itemCard(item){
 }
 
 function renderList(){
-  const wish=items.filter(i=>!i.done),done=items.filter(i=>i.done);
-  document.getElementById('s-all').textContent=items.length;
+  const wish=state.items.filter(i=>!i.done), done=state.items.filter(i=>i.done);
+  document.getElementById('s-all').textContent=state.items.length;
   document.getElementById('s-wish').textContent=wish.length;
   document.getElementById('s-done').textContent=done.length;
   document.getElementById('s-sum').textContent=fmt(done.reduce((a,i)=>a+i.price*i.qty,0));
-  document.getElementById('fcnt-all').textContent=items.length;
+  document.getElementById('fcnt-all').textContent=state.items.length;
   document.getElementById('fcnt-wish').textContent=wish.length;
   document.getElementById('fcnt-done').textContent=done.length;
 
@@ -439,7 +451,7 @@ function renderList(){
     if(!done.length){c.innerHTML='<div class="no-data"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:6px;"></i>구매완료 항목이 없어요.</div>';return;}
     c.innerHTML=done.map(itemCard).join('');
   } else {
-    if(!items.length){c.innerHTML='<div class="no-data"><i class="ti ti-list" style="font-size:28px;display:block;margin-bottom:6px;"></i>아이템을 추가해 보세요!</div>';return;}
+    if(!state.items.length){c.innerHTML='<div class="no-data"><i class="ti ti-list" style="font-size:28px;display:block;margin-bottom:6px;"></i>아이템을 추가해 보세요!</div>';return;}
     let html='';
     if(wish.length){
       html+=`<div class="section-sep"><i class="ti ti-heart" style="color:var(--text-accent);" aria-hidden="true"></i> 위시리스트 <span style="font-weight:400;">(${wish.length})</span></div>`;
@@ -455,15 +467,15 @@ function renderList(){
 
 function renderCatList(){
   const c=document.getElementById('cat-list');
-  if(!cats.length){c.innerHTML='<div class="no-data">카테고리가 없어요.</div>';return;}
-  c.innerHTML=cats.map(cat=>{
-    const cnt=items.filter(i=>i.catId===cat.id).length;
+  if(!state.cats.length){c.innerHTML='<div class="no-data">카테고리가 없어요.</div>';return;}
+  c.innerHTML=state.cats.map(cat=>{
+    const cnt=state.items.filter(i=>i.catId===cat.id).length;
     return`<div class="mgmt-card">
       <div class="cat-icon-circle" style="background:${cat.color}20;color:${cat.color};"><i class="ti ${cat.icon}" aria-hidden="true"></i></div>
       <div class="mgmt-info"><div class="mgmt-name">${cat.name}</div><div class="mgmt-sub">아이템 ${cnt}개</div></div>
       <div class="mgmt-actions">
-        <button class="icon-btn" onclick="openModal('cat',${cat.id})" aria-label="수정"><i class="ti ti-edit" aria-hidden="true"></i></button>
-        <button class="icon-btn" onclick="deleteCat(${cat.id})" aria-label="삭제"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        <button class="icon-btn" onclick="openModal('cat',${cat.id})"><i class="ti ti-edit" aria-hidden="true"></i></button>
+        <button class="icon-btn" onclick="deleteCat(${cat.id})"><i class="ti ti-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -471,10 +483,10 @@ function renderCatList(){
 
 function renderPayList(){
   const c=document.getElementById('pay-list');
-  if(!pays.length){c.innerHTML='<div class="no-data">결제수단이 없어요.</div>';return;}
+  if(!state.pays.length){c.innerHTML='<div class="no-data">결제수단이 없어요.</div>';return;}
   const curYm=ym(now);
-  c.innerHTML=pays.map(p=>{
-    const used=items.filter(i=>i.payId===p.id&&i.addedYm===curYm&&i.done).reduce((a,i)=>a+i.price*i.qty,0);
+  c.innerHTML=state.pays.map(p=>{
+    const used=state.items.filter(i=>i.payId===p.id&&i.addedYm===curYm&&i.done).reduce((a,i)=>a+i.price*i.qty,0);
     const pct=p.limit>0?Math.min(100,Math.round(used/p.limit*100)):0;
     return`<div class="mgmt-card">
       <div class="pay-icon-rect" style="background:${p.color};"><i class="ti ${PAY_ICONS[p.type]||'ti-credit-card'}" aria-hidden="true"></i></div>
@@ -489,8 +501,8 @@ function renderPayList(){
         :`<div class="mgmt-sub">한도 미설정</div>`}
       </div>
       <div class="mgmt-actions">
-        <button class="icon-btn" onclick="openModal('pay',${p.id})" aria-label="수정"><i class="ti ti-edit" aria-hidden="true"></i></button>
-        <button class="icon-btn" onclick="deletePay(${p.id})" aria-label="삭제"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        <button class="icon-btn" onclick="openModal('pay',${p.id})"><i class="ti ti-edit" aria-hidden="true"></i></button>
+        <button class="icon-btn" onclick="deletePay(${p.id})"><i class="ti ti-trash" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -502,16 +514,16 @@ function colorPickerHTML(sel){
 function iconPickerHTML(sel){
   return`<div class="icon-row" id="ip">${CAT_ICONS_LIST.map(ic=>`<div class="icon-opt ${ic===sel?'sel':''}" onclick="pickIcon('${ic}')" data-ic="${ic}"><i class="ti ${ic}" aria-hidden="true"></i></div>`).join('')}</div>`;
 }
-function pickColor(c){
+window.pickColor = function(c){
   selColor=c;
   document.querySelectorAll('#cp .color-dot').forEach(d=>{d.style.outline=d.dataset.c===c?`3px solid ${c}`:'3px solid transparent';});
-}
-function pickIcon(ic){
+};
+window.pickIcon = function(ic){
   selIcon=ic;
   document.querySelectorAll('#ip .icon-opt').forEach(d=>{d.classList.toggle('sel',d.dataset.ic===ic);});
-}
+};
 
-function openModal(mode,id){
+window.openModal = function(mode, id){
   modalMode=mode; editingId=id||null;
   const body=document.getElementById('modal-body');
   if(mode==='cat'){
@@ -538,38 +550,41 @@ function openModal(mode,id){
   document.getElementById('modal-save-btn').onclick=saveModal;
   document.getElementById('main-modal').classList.add('open');
   setTimeout(()=>document.getElementById('m-name')&&document.getElementById('m-name').focus(),50);
-}
-function closeModal(){document.getElementById('main-modal').classList.remove('open');}
+};
+
+window.closeModal = function(){document.getElementById('main-modal').classList.remove('open');};
+
 function saveModal(){
   const name=document.getElementById('m-name').value.trim();
   if(!name){document.getElementById('m-name').focus();return;}
   if(modalMode==='cat'){
     const data={name,icon:selIcon,color:selColor};
     if(editingId)Object.assign(getCat(editingId),data);
-    else cats.push({id:nCatId++,...data});
+    else state.cats.push({id:state.nCatId++,...data});
     save(); refreshSelects(); renderCatList();
   } else {
     const data={name,type:document.getElementById('m-type').value,num:document.getElementById('m-num').value.trim(),color:selColor,limit:parseInt(document.getElementById('m-limit').value)||0};
     if(editingId)Object.assign(getPay(editingId),data);
-    else pays.push({id:nPayId++,...data});
+    else state.pays.push({id:state.nPayId++,...data});
     save(); refreshSelects(); renderPayList();
   }
   closeModal();
 }
-function deleteCat(id){
-  if(items.some(i=>i.catId===id)){alert('해당 카테고리를 사용 중인 아이템이 있어요.');return;}
-  cats=cats.filter(c=>c.id!==id); save(); refreshSelects(); renderCatList();
-}
-function deletePay(id){
-  if(items.some(i=>i.payId===id)){alert('해당 결제수단을 사용 중인 아이템이 있어요.');return;}
-  pays=pays.filter(p=>p.id!==id); save(); refreshSelects(); renderPayList();
-}
+
+window.deleteCat = function(id){
+  if(state.items.some(i=>i.catId===id)){alert('해당 카테고리를 사용 중인 아이템이 있어요.');return;}
+  state.cats=state.cats.filter(c=>c.id!==id); save(); refreshSelects(); renderCatList();
+};
+window.deletePay = function(id){
+  if(state.items.some(i=>i.payId===id)){alert('해당 결제수단을 사용 중인 아이템이 있어요.');return;}
+  state.pays=state.pays.filter(p=>p.id!==id); save(); refreshSelects(); renderPayList();
+};
 
 function renderMonthly(){
   const title=`${viewYear}년 ${viewMonth+1}월`;
   document.getElementById('month-title').textContent=title;
   const targetYm=viewYear*100+viewMonth;
-  const mi=items.filter(i=>i.addedYm===targetYm&&i.done);
+  const mi=state.items.filter(i=>i.addedYm===targetYm&&i.done);
   const c=document.getElementById('monthly-content');
   if(!mi.length){c.innerHTML=`<div class="no-data"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:6px;"></i>${title}에 구매한 항목이 없어요.</div>`;return;}
   const total=mi.reduce((a,i)=>a+i.price*i.qty,0);
@@ -609,7 +624,7 @@ function renderMonthly(){
     }).join('')}`;
 }
 
-function showPanel(name,el){
+window.showPanel = function(name, el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
@@ -617,18 +632,33 @@ function showPanel(name,el){
   if(name==='payments')renderPayList();
   if(name==='categories')renderCatList();
   if(name==='monthly')renderMonthly();
-}
-function changeMonth(dir){
+};
+
+window.changeMonth = function(dir){
   viewMonth+=dir;
   if(viewMonth<0){viewMonth=11;viewYear--;}
   if(viewMonth>11){viewMonth=0;viewYear++;}
   renderMonthly();
-}
+};
 
 document.getElementById('f-name').addEventListener('keydown',e=>{if(e.key==='Enter')addItem();});
 document.getElementById('main-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 
-load(); refreshSelects(); renderList();
+// Firestore 실시간 동기화
+onSnapshot(docRef, (snap) => {
+  document.getElementById('loading').style.display='none';
+  document.getElementById('main-content').style.display='block';
+  if(snap.exists()){
+    state = snap.data();
+  }
+  setSyncStatus('ok');
+  refreshSelects();
+  renderList();
+}, (error) => {
+  console.error(error);
+  setSyncStatus('error');
+  document.getElementById('loading').innerHTML='<i class="ti ti-wifi-off" style="font-size:32px;display:block;margin-bottom:8px;color:var(--text-danger);animation:none;"></i>연결 실패. 페이지를 새로고침 해주세요.';
+});
 </script>
 </body>
 </html>
