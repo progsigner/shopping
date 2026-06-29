@@ -389,6 +389,35 @@ window.addItem = function(){
 
 window.markDone = function(id){const i=state.items.find(x=>x.id===id);if(i)i.done=!i.done;save();renderList();};
 window.deleteItem = function(id){state.items=state.items.filter(x=>x.id!==id);save();renderList();};
+
+window.editItem = function(id){
+  const item=state.items.find(x=>x.id===id);
+  if(!item)return;
+  const body=document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent='아이템 수정';
+  modalMode='item'; editingId=id;
+  body.innerHTML=`
+    <div class="field"><label>아이템 이름</label><input type="text" id="m-name" value="${item.name}" /></div>
+    <div style="display:flex;gap:8px;">
+      <div class="field" style="min-width:60px;"><label>수량</label><input type="number" id="m-qty" value="${item.qty}" min="1"/></div>
+      <div class="field"><label>카테고리</label><select id="m-cat">${state.cats.map(c=>`<option value="${c.id}" ${c.id===item.catId?'selected':''}>${c.name}</option>`).join('')}</select></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div class="field" style="min-width:95px;"><label>가격 (원)</label><input type="number" id="m-price" value="${item.price}" min="0"/></div>
+      <div class="field"><label>결제수단</label><select id="m-pay">${state.pays.map(p=>`<option value="${p.id}" ${p.id===item.payId?'selected':''}>${p.name}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>할부</label><select id="m-inst">
+      ${[0,2,3,6,12,24].map(v=>`<option value="${v}" ${v===item.inst?'selected':''}>${v===0?'일시불':v+'개월'}</option>`).join('')}
+    </select></div>
+    <div class="field"><label>구매 URL (선택)</label><input type="url" id="m-url" value="${item.url||''}" placeholder="https://..."/></div>
+    <div class="field"><label>상태</label><select id="m-done">
+      <option value="0" ${!item.done?'selected':''}>위시리스트</option>
+      <option value="1" ${item.done?'selected':''}>구매완료</option>
+    </select></div>`;
+  document.getElementById('modal-save-btn').onclick=saveModal;
+  document.getElementById('main-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('m-name')&&document.getElementById('m-name').focus(),50);
+};
 window.payMonth = function(id){const i=state.items.find(x=>x.id===id);if(i&&i.paidMonths<i.inst){i.paidMonths++;save();renderList();}};
 
 window.clearFiltered = function(){
@@ -417,6 +446,7 @@ function itemCard(item){
       <span class="item-name">${item.name}${item.qty>1?` <span style="font-size:11px;color:var(--text-muted);">×${item.qty}</span>`:''}</span>
       <span class="item-price">${item.price?fmt(item.price*item.qty):''}</span>
       ${actionBtn}
+      <button class="icon-btn" onclick="editItem(${item.id})" style="color:var(--text-muted);"><i class="ti ti-edit" aria-hidden="true"></i></button>
       <button class="icon-btn" onclick="deleteItem(${item.id})"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
     <div class="item-meta">
@@ -557,7 +587,20 @@ window.closeModal = function(){document.getElementById('main-modal').classList.r
 function saveModal(){
   const name=document.getElementById('m-name').value.trim();
   if(!name){document.getElementById('m-name').focus();return;}
-  if(modalMode==='cat'){
+  if(modalMode==='item'){
+    const item=state.items.find(x=>x.id===editingId);
+    if(item){
+      item.name=name;
+      item.qty=parseInt(document.getElementById('m-qty').value)||1;
+      item.catId=parseInt(document.getElementById('m-cat').value);
+      item.price=parseInt(document.getElementById('m-price').value)||0;
+      item.payId=parseInt(document.getElementById('m-pay').value);
+      item.inst=parseInt(document.getElementById('m-inst').value);
+      item.url=document.getElementById('m-url').value.trim();
+      item.done=document.getElementById('m-done').value==='1';
+    }
+    save(); renderList();
+  } else if(modalMode==='cat'){
     const data={name,icon:selIcon,color:selColor};
     if(editingId)Object.assign(getCat(editingId),data);
     else state.cats.push({id:state.nCatId++,...data});
